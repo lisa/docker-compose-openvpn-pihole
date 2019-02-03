@@ -1,0 +1,38 @@
+---
+  version: '3'
+  services:
+    openvpn:
+      image: kylemanna/openvpn
+      cap_add:
+        - NET_ADMIN
+      container_name: openvpn
+      expose:
+        - "80/tcp"
+        - "53/tcp"
+        - "443/tcp"
+        - "53/udp"
+      ports:
+        - "1194:1194/udp"
+      restart: always
+      volumes:
+        - ./openvpn:/etc/openvpn
+      command: [ "/etc/openvpn/start.sh"]
+
+    pihole:
+      depends_on: 
+        - "openvpn"
+      image: pihole/pihole:latest
+      cap_add:
+        - NET_ADMIN
+      container_name: pihole_compose
+      network_mode: "service:openvpn"
+      restart: always
+      volumes:
+        - ./pihole/pihole:/etc/pihole
+        - ./pihole/dnsmasq.d:/etc/dnsmasq.d
+      environment:
+        - ServerIP=${TUNNEL_ENDPOINT}
+        - TZ="UTC"
+        - WEBPASSWORD=${PIHOLE_WEBPW}
+        - INTERFACE="${TUNNEL_INTERFACE}"
+        - DNSMASQ_LISTENING="single"
